@@ -2345,7 +2345,23 @@ button { font: inherit; color: inherit; }
       syncBtns.forEach((b) => { b.disabled = false; });
     }
   }
-  if (SYNC_URL) syncBtns.forEach((b) => { b.hidden = false; b.addEventListener("click", startSync); });
+  // Without a relay, the sync runs on the office PC every 10 minutes and pushes new prices here;
+  // the button then checks for a newer file and reloads.
+  async function refreshPrices() {
+    syncBtns.forEach((b) => { b.disabled = true; });
+    syncMsg("בודק אם יש מחירים חדשים…");
+    try {
+      const d = await liveDate();
+      if (d && d !== PRICES_DATE) { syncMsg("יש מחירים חדשים, טוען מחדש…"); location.reload(); return; }
+      syncMsg(stampText + " אין חדש. המחירים מתעדכנים מהמשרד האחורי כל 10 דקות.");
+      toast("המחירים מעודכנים");
+    } catch (e) {
+      syncMsg(stampText + " אין חיבור לאינטרנט כרגע.");
+    } finally {
+      syncBtns.forEach((b) => { b.disabled = false; });
+    }
+  }
+  syncBtns.forEach((b) => { b.hidden = false; b.addEventListener("click", SYNC_URL ? startSync : refreshPrices); });
   try {
     await Promise.all([
       document.fonts.load('700 40px "Klir Sans"', "אבג 0123456789 ₪"),

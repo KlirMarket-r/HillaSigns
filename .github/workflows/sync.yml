@@ -4,11 +4,8 @@ on:
   # On demand: the סנכרון מחירים button in the app (through sync-relay/), or "Run workflow" on GitHub.
   # No schedule (19.11.2026): the hourly runs failed every hour and mailed Ron each time.
   workflow_dispatch:
-  # And once after every change to the sync itself, so a broken sync shows up right away
-  push:
-    paths:
-      - sync.py
-      - .github/workflows/sync.yml
+  # (Since 19.11.2026 the sync normally runs on Ron's PC, see local-sync/ in the HillaSigns folder.
+  #  This workflow is a spare: it needs the secrets KUPOT_USER / KUPOT_PASS, which are not set.)
 
 permissions:
   contents: write

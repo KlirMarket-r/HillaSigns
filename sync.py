@@ -245,4 +245,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            print(f"::error title=sync::{e.code}", flush=True)   # shows as a GitHub annotation
+        raise
+    except Exception as e:
+        print(f"::error title=sync::{type(e).__name__}: {str(e)[:300]}", flush=True)
+        raise
