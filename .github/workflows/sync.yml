@@ -1,10 +1,8 @@
 name: סנכרון מהמשרד האחורי
 
 on:
-  # Every hour from 07:00 to 20:00 Israel time, Sunday to Friday
-  schedule:
-    - cron: "0 4-18 * * 0-5"
-  # The "Run workflow" button on GitHub, for an update right now
+  # On demand only: the סנכרון button in the app, or "Run workflow" on GitHub.
+  # No schedule (19.11.2026): the hourly runs failed every hour and mailed Ron each time.
   workflow_dispatch:
 
 permissions:
