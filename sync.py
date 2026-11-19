@@ -151,13 +151,14 @@ def build_rows(records, old):
          and r["price"] > 0
          and r["name"] != "כללי"]
 
-    # Keep the category order the app already has (new categories go last, in order of appearance)
+    # Deterministic order (the API returns products in a different order on every call): categories in
+    # the order the app already has (new ones last), then by name and barcode inside each category
     cat_order = {}
     for x in old:
         cat_order.setdefault(x[3], len(cat_order))
     for r in c:
         cat_order.setdefault(r["cat"], len(cat_order))
-    c.sort(key=lambda r: cat_order[r["cat"]])
+    c.sort(key=lambda r: (cat_order[r["cat"]], r["name"], r["barcode"]))
 
     # Sales come from the app as it is now: by barcode, or by name when the barcode changed
     # (by name only inside the same category: the truck has products with a store product's name)
