@@ -1,16 +1,17 @@
 """
 Hilla's Signs: sync from the Kupot back office.
 
-1. Logs into the back office with KUPOT_USER / KUPOT_PASS (GitHub secrets).
-2. Goes to מוצרים and clicks Export. It only ever exports: it never clicks import,
-   saves nothing and changes nothing in the back office.
+1. Logs into the back office (its normal login form) with KUPOT_USER / KUPOT_PASS (GitHub secrets).
+2. Reads the product list from the back office API, the same JSON the מוצרים page shows.
+   Read only: it never imports, saves nothing and changes nothing in the back office.
 3. Rebuilds the product list inside index.html with the app's rules
    (no כפר קרע, no מבצעים, no ברקוד כללי, no קרטונים שלמים; סניף זלדמן prices, or the משאית הקסמים
    price for products sold only there) and keeps every sale on its product.
 4. Writes index.html only if something actually changed.
 
-Run locally:  KUPOT_USER=... KUPOT_PASS=... python sync.py
-Use an export you already have instead of logging in:  python sync.py --file export.xlsx
+Run locally:            KUPOT_USER=... KUPOT_PASS=... python sync.py
+From a saved export:    python sync.py --file export.xlsx
+From saved API JSON:    python sync.py --json products.json
 """
 import datetime
 import json
@@ -19,16 +20,16 @@ import re
 import sys
 from zoneinfo import ZoneInfo
 
-import pandas as pd
-
 URL = os.environ.get("KUPOT_URL", "https://backoffice.kupot.co.il/")
+API = os.environ.get("KUPOT_API", "https://backoffice.server.kupot.co.il/api/web/products/by-client")
 APP = os.environ.get("APP_FILE", "index.html")
-DOWNLOAD = "products_export.xlsx"
 SHOT = "sync-failure.png"
 TZ = ZoneInfo("Asia/Jerusalem")
 
 EXCLUDED = {"כפר קרע", "מבצעים", "מבצים", "ברקוד כללי", "קרטונים שלמים"}
-RENAMED = {"Unknown": "ללא קטגוריה"}
+RENAMED = {"Unknown": "ללא קטגוריה", "": "ללא קטגוריה"}
+MAIN_BRANCH = "סניף זלדמן"
+TRUCK_BRANCH = "משאית הקסמים"
 DATA_RE = re.compile(r"const DATA = (\[\[.*?\]\]);", re.S)
 DATE_RE = re.compile(r'const PRICES_DATE = "[^"]*";')
 
@@ -38,90 +39,43 @@ def log(*a):
 
 
 # ---------------------------------------------------------------- back office
-def download_export(path):
-    from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
+def fetch_products():
+    """Log in through the real login form, then read the product JSON with the session's token.
+    The token is used for one request and never printed or saved."""
+    from playwright.sync_api import sync_playwright
 
     user, pw = os.environ.get("KUPOT_USER"), os.environ.get("KUPOT_PASS")
     if not user or not pw:
         sys.exit("KUPOT_USER / KUPOT_PASS are not set")
 
-    def click_text(page, patterns, what, timeout=20000):
-        """Click the first visible button, link or text that matches one of the patterns."""
-        deadline = datetime.datetime.now() + datetime.timedelta(milliseconds=timeout)
-        while datetime.datetime.now() < deadline:
-            for pat in patterns:
-                loc = (page.get_by_role("button", name=pat)
-                       .or_(page.get_by_role("link", name=pat))
-                       .or_(page.get_by_role("menuitem", name=pat))
-                       .or_(page.get_by_text(pat)))
-                for i in range(loc.count()):
-                    el = loc.nth(i)
-                    if el.is_visible():
-                        txt = (el.inner_text() or "").strip()
-                        if "ייבוא" in txt and "ייצוא" not in txt:
-                            continue  # never touch import
-                        log(f"click: {what} ({txt[:40]!r})")
-                        el.click()
-                        return True
-            page.wait_for_timeout(500)
-        return False
-
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        ctx = browser.new_context(accept_downloads=True, locale="he-IL", timezone_id="Asia/Jerusalem",
-                                  viewport={"width": 1440, "height": 900})
+        ctx = browser.new_context(locale="he-IL", timezone_id="Asia/Jerusalem", viewport={"width": 1366, "height": 800})
         page = ctx.new_page()
         try:
             log("open", URL)
             page.goto(URL, wait_until="domcontentloaded", timeout=60000)
-
-            # Log in: the username box is the first visible text field, then the password
-            pw_box = page.locator("input[type=password]").first
-            pw_box.wait_for(state="visible", timeout=30000)
-            user_box = page.locator(
-                "input:not([type=password]):not([type=hidden]):not([type=checkbox])"
-                ":not([type=radio]):not([type=submit]):not([type=button])").first
-            user_box.fill(user)
-            pw_box.fill(pw)
+            page.locator("input[name=email]").first.wait_for(state="visible", timeout=30000)
+            page.locator("input[name=email]").first.fill(user)
+            page.locator("input[name=password]").first.fill(pw)
             log("log in")
-            def logged_in(wait):
-                try:
-                    pw_box.wait_for(state="hidden", timeout=wait)
-                    return True
-                except PwTimeout:
-                    return False
-            if not click_text(page, [re.compile(r"^\s*(כניסה|היכנס|התחבר(ות)?|Login|Log in|Sign in)\s*$", re.I)],
-                              "login button", timeout=3000):
-                pw_box.press("Enter")
-            if not logged_in(10000):
-                # No form to submit with Enter and no button text we know: use the page's own submit button
-                btn = page.locator("button[type=submit], input[type=submit], button").filter(visible=True).first
-                if btn.count():
-                    log("click: login button (fallback)")
-                    btn.click()
-                logged_in(20000)
-            page.wait_for_load_state("networkidle", timeout=60000)
-            if page.locator("input[type=password]").filter(visible=True).count():
-                raise RuntimeError("Still on the login page: check KUPOT_USER / KUPOT_PASS")
-
-            # Left panel: מוצרים
-            if not click_text(page, [re.compile(r"^\s*מוצרים\s*$")], "מוצרים"):
-                raise RuntimeError("Couldn't find מוצרים in the menu")
-            page.wait_for_load_state("networkidle", timeout=60000)
-
-            # Export (some versions put it under ייבוא/ייצוא first)
-            export = [re.compile(r"^\s*(Export|ייצוא)(\s+(לאקסל|ל-?Excel|Excel))?\s*$", re.I)]
-            with page.expect_download(timeout=180000) as dl:
-                if not click_text(page, export, "Export", timeout=8000):
-                    if not click_text(page, [re.compile(r"ייבוא\s*.?\s*ייצוא|Import\s*.?\s*Export", re.I)], "ייבוא/ייצוא"):
-                        raise RuntimeError("Couldn't find the Export button")
-                    page.wait_for_timeout(1500)
-                    if not click_text(page, export, "Export"):
-                        raise RuntimeError("Couldn't find the Export button")
-            d = dl.value
-            d.save_as(path)
-            log("downloaded:", d.suggested_filename)
-            return d.suggested_filename
+            btn = page.get_by_role("button", name=re.compile(r"^\s*כניסה\s*$"))
+            if btn.count():
+                btn.first.click()
+            else:
+                page.locator("input[name=password]").first.press("Enter")
+            # Logged in = the app stored its session token
+            page.wait_for_function("() => !!localStorage.getItem('token')", timeout=30000)
+            token = page.evaluate("() => localStorage.getItem('token')")
+            log("logged in, reading products")
+            r = page.request.get(API, headers={"Authorization": "Bearer " + token, "Accept": "application/json"})
+            if r.status != 200:
+                raise RuntimeError(f"products API answered {r.status}")
+            items = r.json()
+            if not isinstance(items, list):
+                raise RuntimeError("products API did not return a list")
+            log(f"{len(items)} products from the back office")
+            return items
         except Exception:
             try:
                 page.screenshot(path=SHOT, full_page=True)
@@ -131,6 +85,52 @@ def download_export(path):
             raise
         finally:
             browser.close()
+
+
+# ---------------------------------------------------------------- normalize
+def norm_name(s):
+    return re.sub(r"\s+", " ", str(s or "")).strip()
+
+
+def records_from_api(items):
+    """API products -> [{name, barcode, cat, price}]"""
+    out = []
+    for p in items:
+        if p.get("isDeleted"):
+            continue
+        prices = {}
+        for d in p.get("detailsPerBranch") or []:
+            try:
+                prices[norm_name(d.get("branchName"))] = float(d.get("branchPrice") or 0)
+            except (TypeError, ValueError):
+                pass
+        price = prices.get(MAIN_BRANCH) or prices.get(TRUCK_BRANCH) or 0.0
+        cat = norm_name(p.get("categoryName"))
+        out.append({"name": norm_name(p.get("productName")), "barcode": norm_name(p.get("barcode")),
+                    "cat": RENAMED.get(cat, cat), "price": price})
+    return out
+
+
+def branch_price(details, branch):
+    m = re.search(re.escape(branch) + r" \(([^)]*)\)", str(details))
+    try:
+        return float(m.group(1)) if m else 0.0
+    except ValueError:
+        return 0.0
+
+
+def records_from_xlsx(xlsx):
+    """Back office export (one sheet per category) -> [{name, barcode, cat, price}]"""
+    import pandas as pd
+    out = []
+    for sheet, df in pd.read_excel(xlsx, sheet_name=None, dtype=str).items():
+        cat = sheet.strip()
+        cat = RENAMED.get(cat, cat)
+        for r in df.fillna("").itertuples():
+            details = getattr(r, "detailsPerBranch", "")
+            out.append({"name": norm_name(r.productName), "barcode": norm_name(r.barcode), "cat": cat,
+                        "price": branch_price(details, MAIN_BRANCH) or branch_price(details, TRUCK_BRANCH)})
+    return out
 
 
 # ---------------------------------------------------------------- build
@@ -144,33 +144,20 @@ def export_time(filename):
     return datetime.datetime.now(TZ).strftime("%d.%m.%Y, %H:%M")
 
 
-def branch_price(details, branch):
-    m = re.search(re.escape(branch) + r" \(([^)]*)\)", str(details))
-    try:
-        return float(m.group(1)) if m else 0.0
-    except ValueError:
-        return 0.0
+def build_rows(records, old):
+    c = [r for r in records
+         if r["cat"] not in EXCLUDED
+         and not re.search("לא פעיל|לא בשימוש", r["name"])
+         and r["price"] > 0
+         and r["name"] != "כללי"]
 
-
-def shelf_price(details):
-    """The סניף זלדמן price; for products sold only on the truck, the משאית הקסמים price."""
-    return branch_price(details, "סניף זלדמן") or branch_price(details, "משאית הקסמים")
-
-
-def build_rows(xlsx, old):
-    frames = []
-    for sheet, df in pd.read_excel(xlsx, sheet_name=None, dtype=str).items():
-        df["cat"] = RENAMED.get(sheet.strip(), sheet.strip())
-        frames.append(df)
-    d = pd.concat(frames).fillna("")
-    d["price"] = d.detailsPerBranch.map(shelf_price)
-    d["name"] = d.productName.str.replace(r"\s+", " ", regex=True).str.strip()
-    d["barcode"] = d.barcode.astype(str).str.strip()
-
-    c = d[~d.cat.isin(EXCLUDED)]
-    c = c[~c.name.str.contains("לא פעיל|לא בשימוש")]
-    c = c[c.price > 0]
-    c = c[c.name != "כללי"]
+    # Keep the category order the app already has (new categories go last, in order of appearance)
+    cat_order = {}
+    for x in old:
+        cat_order.setdefault(x[3], len(cat_order))
+    for r in c:
+        cat_order.setdefault(r["cat"], len(cat_order))
+    c.sort(key=lambda r: cat_order[r["cat"]])
 
     # Sales come from the app as it is now: by barcode, or by name when the barcode changed
     # (by name only inside the same category: the truck has products with a store product's name)
@@ -183,11 +170,11 @@ def build_rows(xlsx, old):
             sales.setdefault(("nm", x[0].strip(), x[3]), v)
 
     rows = []
-    for r in c.itertuples():
-        k = ("bc", r.barcode) if r.barcode and ("bc", r.barcode) in sales else ("nm", r.name, r.cat)
-        price = float(r.price)
-        price = int(price) if price == int(price) else price
-        row = [r.name, r.barcode, price, r.cat]
+    for r in c:
+        k = ("bc", r["barcode"]) if r["barcode"] and ("bc", r["barcode"]) in sales else ("nm", r["name"], r["cat"])
+        price = float(r["price"])
+        price = int(price) if price == int(price) else round(price, 2)
+        row = [r["name"], r["barcode"], price, r["cat"]]
         if k in sales:
             q, t, g, gt = sales[k]
             row += [q, t] + ([g, gt] if g is not None else [])
@@ -200,7 +187,8 @@ def summary(old, new):
     nb = {x[1]: x for x in new if x[1]}
     on = {x[0] for x in old}
     nn = {x[0] for x in new}
-    lines = [f"**{len(new)} products** (was {len(old)}), {sum(1 for x in new if len(x) > 4)} with a sale", ""]
+    lines = [f"**{len(new)} products** (was {len(old)}), {sum(1 for x in new if len(x) > 4)} with a sale"
+             f" (was {sum(1 for x in old if len(x) > 4)})", ""]
     ch = [f"- {x[0]}: ₪{ob[b][2]} → ₪{x[2]}" for b, x in nb.items() if b in ob and abs(ob[b][2] - x[2]) > 1e-9]
     if ch:
         lines += ["**Price changes (reprint these signs):**"] + ch + [""]
@@ -210,6 +198,9 @@ def summary(old, new):
         lines += [f"**New or renamed ({len(added)}):** " + ", ".join(added[:40]), ""]
     if gone:
         lines += [f"**Gone or renamed ({len(gone)}):** " + ", ".join(gone[:40]), ""]
+    lost = [x[0] for x in old if len(x) > 4 and x[0] not in nn and not (x[1] and x[1] in nb)]
+    if lost:
+        lines += ["**Sales lost (product renamed, re-attach by hand):** " + ", ".join(lost), ""]
     return "\n".join(lines)
 
 
@@ -217,19 +208,24 @@ def main():
     args = sys.argv[1:]
     if "--file" in args:
         xlsx = args[args.index("--file") + 1]
-        fname = os.path.basename(xlsx)
+        records = records_from_xlsx(xlsx)
+        stamp = export_time(os.path.basename(xlsx))
+    elif "--json" in args:
+        with open(args[args.index("--json") + 1], encoding="utf-8") as f:
+            records = records_from_api(json.load(f))
+        stamp = datetime.datetime.now(TZ).strftime("%d.%m.%Y, %H:%M")
     else:
-        xlsx = DOWNLOAD
-        fname = download_export(xlsx)
+        records = records_from_api(fetch_products())
+        stamp = datetime.datetime.now(TZ).strftime("%d.%m.%Y, %H:%M")
 
     html = open(APP, encoding="utf-8").read()
     m = DATA_RE.search(html)
     if not m:
         sys.exit(f"No product list found in {APP}")
     old = json.loads(m.group(1))
-    new = build_rows(xlsx, old)
+    new = build_rows(records, old)
     if len(new) < 50:
-        sys.exit(f"Only {len(new)} products in the export, something is wrong; the app was not changed")
+        sys.exit(f"Only {len(new)} products came back, something is wrong; the app was not changed")
 
     if new == old:
         log("No changes in the back office, the app stays as it is.")
@@ -237,8 +233,8 @@ def main():
     else:
         data = json.dumps(new, ensure_ascii=False, separators=(",", ":"))
         html = html[:m.start()] + "const DATA = " + data + ";" + html[m.end():]
-        html = DATE_RE.sub(f'const PRICES_DATE = "{export_time(fname)}";', html, count=1)
-        open(APP, "w", encoding="utf-8").write(html)
+        html = DATE_RE.sub(f'const PRICES_DATE = "{stamp}";', html, count=1)
+        open(APP, "w", encoding="utf-8", newline="\n").write(html)
         report = summary(old, new)
         log(report)
 

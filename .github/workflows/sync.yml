@@ -1,9 +1,14 @@
 name: סנכרון מהמשרד האחורי
 
 on:
-  # On demand only: the סנכרון button in the app, or "Run workflow" on GitHub.
+  # On demand: the סנכרון מחירים button in the app (through sync-relay/), or "Run workflow" on GitHub.
   # No schedule (19.11.2026): the hourly runs failed every hour and mailed Ron each time.
   workflow_dispatch:
+  # And once after every change to the sync itself, so a broken sync shows up right away
+  push:
+    paths:
+      - sync.py
+      - .github/workflows/sync.yml
 
 permissions:
   contents: write
