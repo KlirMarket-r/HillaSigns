@@ -208,13 +208,10 @@ button { font: inherit; color: inherit; }
 .stepper output { min-width: 28px; text-align: center; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .remove {
-  width: 28px; height: 28px; margin-top: -3px;
-  border: 0; border-radius: 50%;
-  background: none; color: var(--secondary);
-  display: grid; place-items: center; cursor: pointer;
+  border: 0; background: none; padding: 2px 4px; margin-top: -1px;
+  font: inherit; font-size: 13.5px; color: var(--secondary); cursor: pointer;
 }
-.remove:hover { background: var(--fill); color: var(--text); }
-.remove svg { width: 14px; height: 14px; }
+.remove:hover { color: #b3261e; text-decoration: underline; text-underline-offset: 3px; }
 
 .queue-empty { padding: 14px 0; font-size: 14.5px; line-height: 1.55; color: var(--secondary); }
 .queue-empty[hidden] { display: none; }
@@ -428,11 +425,22 @@ button { font: inherit; color: inherit; }
   cursor: pointer;
 }
 .scan-btn svg { width: 20px; height: 20px; }
-.phone-search .scan-btn { background: #fff; color: var(--navy); box-shadow: inset 0 0 0 1.5px var(--navy); }
-.phone-scanprint { padding: 0 14px 12px; background: var(--mist); }
-.phone-scanprint[hidden] { display: none; }
 .phone-search { border-bottom: 0; }
 .phone-cat { padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+.card .c-step { grid-column: 2; grid-row: 2 / span 2; justify-self: end; display: flex; align-items: center; gap: 2px; }
+.card .c-step button {
+  width: 42px; height: 42px; border: 0; border-radius: 50%; padding: 0;
+  font: inherit; font-size: 25px; font-weight: 600; line-height: 1; cursor: pointer;
+}
+.card .c-plus { background: var(--navy); color: #fff; }
+.card .c-minus { background: var(--fill); color: var(--navy); }
+.card .c-step output { min-width: 34px; text-align: center; font-size: 19px; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+.card.in { box-shadow: 0 0 0 2px var(--navy); }
+.phone-bar .badge {
+  display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 8px; margin-inline-start: 4px;
+  border-radius: 999px; background: #fff; color: var(--navy); font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.big-btn[hidden] { display: none; }
 .scan-btn[hidden] { display: none; }
 .phone-list { list-style: none; margin: 0; padding: 12px 14px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; }
 .card {
@@ -442,8 +450,8 @@ button { font: inherit; color: inherit; }
   display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 6px; align-items: center;
 }
 .card .c-name { font-size: 17px; font-weight: 600; line-height: 1.3; text-align: right; }
-.card .c-price { grid-column: 2; grid-row: 1; font-size: 23px; font-weight: 700; color: var(--navy); white-space: nowrap; }
-.card .c-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13.5px; color: var(--secondary); }
+.card .c-price { grid-column: 2; grid-row: 1; justify-self: end; font-size: 23px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+.card .c-meta { grid-column: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13.5px; color: var(--secondary); }
 .card .c-deal {
   display: inline-block; background: var(--red); color: #fff;
   font-size: 13px; font-weight: 700; padding: 3px 9px 4px; border-radius: 7px;
@@ -452,19 +460,6 @@ button { font: inherit; color: inherit; }
 .phone-cat { padding: 0 14px 0; background: var(--mist); }
 .phone-cat .cat { margin: 0; background: #fff; box-shadow: 0 0 0 1px var(--hairline); font-size: 16px; }
 .card { cursor: pointer; }
-.card .c-add {
-  grid-column: 1 / -1; justify-self: start;
-  border: 0; border-radius: 10px; background: var(--navy); color: #fff;
-  font: inherit; font-size: 15px; font-weight: 600; padding: 9px 14px; cursor: pointer;
-}
-.card .c-add.in { background: var(--fill); color: var(--navy); }
-.card .c-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
-.card .c-row .c-add { grid-column: auto; }
-.card .c-in { font-size: 15px; font-weight: 600; color: var(--navy); }
-.card .c-remove {
-  border: 0; border-radius: 10px; background: var(--fill); color: #b3261e;
-  font: inherit; font-size: 14px; font-weight: 600; padding: 8px 12px; cursor: pointer;
-}
 .scanbar {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 2px 4px 0; font-size: 14px; color: var(--secondary);
@@ -507,9 +502,13 @@ button { font: inherit; color: inherit; }
 .phone-print .pp-head button { border: 0; border-radius: 999px; background: rgba(255, 255, 255, .18); color: #fff; font: inherit; font-size: 15px; font-weight: 600; padding: 8px 15px; cursor: pointer; }
 .phone-print .pp-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 14px 14px; }
 .phone-print .queue { margin-top: 10px; }
-.phone-print .remove { width: 36px; height: 36px; margin-top: 0; background: var(--fill); color: #b3261e; box-shadow: inset 0 0 0 1.5px #b3261e; }
-.phone-print .remove svg { width: 16px; height: 16px; }
+.phone-print .remove { font-size: 15px; color: #b3261e; padding: 4px 6px; }
+.phone-print .queue-head h2 { visibility: hidden; }
+.phone-print .stepper button { width: 40px; height: 36px; font-size: 21px; }
+.phone-print .stepper output { min-width: 32px; font-size: 16px; }
+.phone-print .seg button { padding: 7px 14px; }
 .phone-print .pp-foot { padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--hairline); }
+.phone-print .pp-sum:empty { display: none; }
 .phone-print .pp-sum { margin: 0 0 8px; text-align: center; font-size: 14px; color: var(--secondary); }
 .phone-print .pp-alt { display: block; margin: 8px auto 0; border: 0; background: none; color: var(--secondary); font: inherit; font-size: 14px; text-decoration: underline; padding: 6px 10px; cursor: pointer; }
 .phone-print .pp-alt[hidden] { display: none; }
@@ -803,21 +802,13 @@ button { font: inherit; color: inherit; }
       סריקה
     </button>
   </div>
-  <div class="phone-scanprint" id="scanPrintRow">
-    <button class="big-btn" id="scanPrintBtn" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg>
-      סריקה להדפסה
-    </button>
-  </div>
   <div class="phone-cat">
     <label class="sr-only" for="pcat">קטגוריה</label>
     <select class="cat" id="pcat"></select>
   </div>
   <ul class="phone-list" id="phoneList"></ul>
   <div class="phone-empty" id="phoneEmpty">
-    <p><b>סריקה</b> מראה את שם המוצר והמחיר שלו.</p>
-    <p><b>סריקה להדפסה</b>: סורקים מוצר והוא נכנס לרשימת ההדפסה. מהרשימה סורקים מוצר נוסף או מדפיסים, והשלטים יוצאים במדפסת במשרד.</p>
-    <p>אפשר גם לחפש לפי שם או לבחור קטגוריה.</p>
+    <p>סורקים או מחפשים מוצר, ולוחצים <b>+</b> כדי להוסיף אותו להדפסה.</p>
     <p class="stamp" id="phoneStamp"></p>
     <button class="sync-btn" id="phoneSyncBtn" type="button" hidden>סנכרון מחירים</button>
   </div>
@@ -1400,10 +1391,9 @@ button { font: inherit; color: inherit; }
       if (p.barcode && !p.group) pr.append(ltr(p.barcode));
       if (p.deal) pr.append(dealInline(p));
       text.append(n, pr);
-      const rm = el("button", "remove");
+      const rm = el("button", "remove", "הסר");
       rm.type = "button"; rm.dataset.act = "remove";
       rm.setAttribute("aria-label", "הסרת " + label + " מהרשימה");
-      rm.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
       top.append(text, rm);
 
       const controls = el("div", "q-controls");
@@ -1425,8 +1415,8 @@ button { font: inherit; color: inherit; }
       const step = el("div", "stepper");
       const minus = el("button", null, "−");
       minus.type = "button"; minus.dataset.act = "minus";
-      minus.setAttribute("aria-label", "עותק אחד פחות של " + label);
-      minus.disabled = it.qty <= 1;
+      // At 1 the minus removes the item
+      minus.setAttribute("aria-label", it.qty <= 1 ? "הסרת " + label + " מהרשימה" : "עותק אחד פחות של " + label);
       const out = el("output", null, String(it.qty));
       out.setAttribute("aria-label", "מספר עותקים");
       const plus = el("button", null, "+");
@@ -1437,6 +1427,8 @@ button { font: inherit; color: inherit; }
 
       controls.append(seg, step);
       li.append(top, controls);
+      const grow = el("div", "q-controls");
+      li.append(grow);
       const gseg = el("div", "seg design-seg");
       gseg.setAttribute("role", "radiogroup");
       gseg.setAttribute("aria-label", "עיצוב השלט של " + label);
@@ -1450,9 +1442,7 @@ button { font: inherit; color: inherit; }
         b.tabIndex = it.design === d ? 0 : -1;
         gseg.append(b);
       });
-      const grow = el("div", "q-controls");
       grow.append(gseg);
-      li.append(grow);
       if (p.deal) {
         const dseg = el("div", "seg deal-seg");
         dseg.setAttribute("role", "radiogroup");
@@ -1467,9 +1457,10 @@ button { font: inherit; color: inherit; }
           b.tabIndex = (it.deal ? "1" : "0") === v ? 0 : -1;
           dseg.append(b);
         });
-        const row = el("div", "q-controls");
-        row.append(dseg);
+        grow.append(dseg);
         if (p.group) {
+          const row = el("div", "q-controls");
+          li.append(row);
           const sseg = el("div", "seg split-seg");
           sseg.setAttribute("role", "radiogroup");
           sseg.setAttribute("aria-label", "שלט אחד או שלט לכל מוצר: " + label);
@@ -1486,7 +1477,6 @@ button { font: inherit; color: inherit; }
           });
           row.append(sseg);
         }
-        li.append(row);
       }
       queueEl.append(li);
     });
@@ -1660,13 +1650,17 @@ button { font: inherit; color: inherit; }
       return;
     }
     if (act === "plus") it.qty = Math.min(MAX_COPIES, it.qty + 1);
-    if (act === "minus") it.qty = Math.max(1, it.qty - 1);
-    if (act === "remove") {
+    if (act === "minus") it.qty--;
+    const gone = act === "remove" || it.qty < 1;
+    if (gone) {
       queue = queue.filter((x) => x !== it);
       statusEl.textContent = "הוסר מהרשימה: " + products[id].name;
     }
     render();
-    if (act === "remove") q.focus();
+    if (gone) {
+      if (!phoneMode()) q.focus();
+      else if (!queue.length) phonePrint.hidden = true;   // the list emptied: back to the search
+    }
     else focusIn(id, 'button[data-act="' + act + '"]');
   });
 
@@ -1874,8 +1868,9 @@ button { font: inherit; color: inherit; }
   function phoneUpdate() {
     const n = signCount();
     phoneBar.hidden = n === 0;
-    phoneOpen.textContent = "להדפסה · " + count(n, "שלט אחד", "שלטים");
-    phoneSum.textContent = summaryEl.textContent;
+    phoneOpen.textContent = "להדפסה";
+    phoneOpen.append(el("span", "badge", String(n)));
+    phoneSum.textContent = "";
     phonePrintBtn.disabled = n === 0;
     if (n === 0 && !phonePrint.hidden && !phoneMode()) phonePrint.hidden = true;
     if (phoneMode()) renderPhone();
@@ -1887,10 +1882,14 @@ button { font: inherit; color: inherit; }
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { toastEl.hidden = true; }, 2200);
   }
-  function phoneAdd(id) {
-    add(id);
-    const p = products[id];
-    toast("נוסף לרשימה: " + p.name);
+  // The + / − on a product card: the number between them is how many signs of it are on the list
+  function phoneStep(p, d) {
+    const it = inQueue(p);
+    if (d > 0) { if (it && it.qty >= MAX_COPIES) return; add(p.id); return; }
+    if (!it) return;
+    it.qty--;
+    if (it.qty < 1) queue = queue.filter((x) => x !== it);
+    render();
   }
   const inQueue = (p) => queue.find((x) => x.id === lead(p).id);
 
@@ -1899,13 +1898,6 @@ button { font: inherit; color: inherit; }
     pcatSel.value = "";
     renderPhone();
     window.scrollTo(0, 0);
-  }
-  function phoneRemove(p) {
-    const it = inQueue(p);
-    if (!it) return;
-    queue = queue.filter((x) => x !== it);
-    render();
-    toast("הוסר מהרשימה: " + p.name);
   }
   function renderPhone() {
     const raw = pq.value, cat = pcatSel.value;
@@ -1939,21 +1931,21 @@ button { font: inherit; color: inherit; }
       if (p.deal) meta.append(dealInline(p, "c-deal"));
       if (p.barcode) meta.append(ltr(p.barcode));
       meta.append(el("span", null, p.cat));
-      // Only the buttons do something; tapping the card itself does nothing
-      const row = el("div", "c-row");
+      // Only the + / − do something; tapping the card itself does nothing
+      const row = el("div", "c-step");
       const it = inQueue(p);
+      const plus = el("button", "c-plus", "+");
+      plus.type = "button";
+      plus.setAttribute("aria-label", "הוספה להדפסה: " + p.name);
+      plus.addEventListener("click", () => phoneStep(p, 1));
       if (it) {
-        row.append(el("span", "c-in", "✓ ברשימה" + (it.qty > 1 ? " (" + it.qty + ")" : "")));
-        const rm = el("button", "c-remove", "הסרה מהרשימה");
-        rm.type = "button";
-        rm.addEventListener("click", () => phoneRemove(p));
-        row.append(rm);
-      } else {
-        const btn = el("button", "c-add", "הוספה להדפסה");
-        btn.type = "button";
-        btn.addEventListener("click", () => phoneAdd(p.id));
-        row.append(btn);
-      }
+        li.classList.add("in");
+        const minus = el("button", "c-minus", "−");
+        minus.type = "button";
+        minus.setAttribute("aria-label", it.qty <= 1 ? "הסרה מההדפסה: " + p.name : "שלט אחד פחות: " + p.name);
+        minus.addEventListener("click", () => phoneStep(p, -1));
+        row.append(minus, el("output", null, String(it.qty)), plus);
+      } else row.append(plus);
       li.append(n, pr, meta, row);
       phoneList.append(li);
     });
@@ -2027,7 +2019,7 @@ button { font: inherit; color: inherit; }
       }
     } catch (e) {
       answer.stop();
-      phoneSum.textContent = summaryEl.textContent;
+      phoneSum.textContent = "";
       toast("אין חיבור לאינטרנט, לא נשלח");
     } finally {
       printing = false;
@@ -2046,10 +2038,10 @@ button { font: inherit; color: inherit; }
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-  const scanPrintBtn = $("scanPrintBtn"), scanTitle = $("scanTitle");
+  const scanTitle = $("scanTitle");
   // Two ways to scan: "look" shows the product's details; "print" puts each scanned product on the print list
   let scanMode = "look";
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { scanBtn.hidden = true; $("scanPrintRow").hidden = true; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { scanBtn.hidden = true; $("scanMoreBtn").hidden = true; }
 
   async function makeDetector() {
     if (!("BarcodeDetector" in window)) return null;
@@ -2401,7 +2393,6 @@ button { font: inherit; color: inherit; }
   })();
 
   scanBtn.addEventListener("click", () => { scanMode = "look"; openScanner(); });
-  scanPrintBtn.addEventListener("click", () => { scanMode = "print"; openScanner(); });
   camBtn.addEventListener("click", nextCamera);
   zoomBtn.addEventListener("click", nextZoom);
   torchBtn.addEventListener("click", toggleTorch);
